@@ -1,0 +1,36 @@
+//
+// Created by memonick on 15/03/2016.
+//
+
+#include <sstream>
+#include <string>
+
+using namespace std;
+
+#ifndef LEXER_AST_NODE_H
+#define LEXER_AST_NODE_H
+
+class printer_visitor;
+class semantic_visitor;
+
+enum var_type {type_string, type_int, type_real, type_bool, type_other};
+
+class AST_node {
+
+    public:
+        virtual ~AST_node() {};
+        virtual void set_level(unsigned level);
+
+        unsigned get_level();
+
+        static string type_to_string(var_type);
+
+        virtual string accept(printer_visitor * v) = 0;
+        virtual var_type accept(semantic_visitor * v) = 0;
+
+    protected:
+        unsigned level;
+
+};
+
+#endif //LEXER_AST_NODE_H

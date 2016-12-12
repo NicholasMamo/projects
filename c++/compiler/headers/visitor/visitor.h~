@@ -1,0 +1,16 @@
+//
+// Created by memonick on 23/03/2016.
+//
+
+#ifndef LEXER_VISITOR_H
+#define LEXER_VISITOR_H
+
+#include "../AST/AST_node.h"
+
+class visitor {
+
+    public:
+        //virtual auto visit(AST_node * node) = 0;
+};
+
+#endif //LEXER_VISITOR_H

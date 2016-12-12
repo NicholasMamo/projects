@@ -1,0 +1,61 @@
+//
+// Created by memonick on 01/03/2016.
+//
+
+#include <string>
+
+#include "token.h"
+
+#ifndef LEXER_LEXER_H
+#define LEXER_LEXER_H
+
+class lexer {
+
+    const string KEYWORDS[6] {"def", "int", "return", "if", "else", "for"};
+
+    public:
+        lexer(string program);
+
+        void set_program(string program);
+
+        string get_program();
+
+        token * get_next_token();
+        void reset();
+
+    private:
+        string program;
+        unsigned position = 0;
+
+        void fetch_attribute(token * t);
+        void fetch_name(token * t);
+        void postprocess(token * t);
+
+        void skip();
+        void skip_comments();
+
+        bool is_bracket(char c);
+        bool is_comma(char c);
+        bool is_eos(char c);
+        bool is_number(char c);
+        bool is_boolean_operator();
+        bool is_operator(char c);
+        bool is_assignment();
+        bool is_simple_assignment();
+        bool is_identifier(char c);
+
+        string get_bracket();
+        string get_comma();
+        string get_eos();
+        string get_number();
+        string get_boolean_operator();
+        string get_operator();
+        string get_assignment();
+        string get_simple_assignment();
+        string get_identifier();
+
+        void check_keyword(token * t);
+
+};
+
+#endif //LEXER_LEXER_H
