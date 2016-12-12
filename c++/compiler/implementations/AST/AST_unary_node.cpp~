@@ -1,0 +1,77 @@
+//
+// Created by memonick on 10/04/2016.
+//
+
+#include "../../headers/AST/AST_unary_node.h"
+
+/**
+ * Initialize the node with the given level
+ * level            the level of the node
+ */
+AST_unary_node::AST_unary_node(unsigned level) {
+    this->set_level(level);
+}
+
+/**
+ * Delete the node
+ */
+AST_unary_node::~AST_unary_node() {}
+
+/**
+ * Set the expression of the unary node
+ * expression_node  the expression node of the unary node
+ */
+void AST_unary_node::set_expression(AST_node * expression_node) {
+    this->expression = expression_node;
+}
+
+/**
+ * Set the type of the unary node
+ * type             the type of the unary node
+ */
+void AST_unary_node::set_type(string type) {
+    this->type = type;
+}
+
+/**
+ * Get the expression of the unary node
+ * return           the expression of the unary node
+ */
+AST_node * AST_unary_node::get_expression() {
+    return this->expression;
+}
+
+/**
+ * Get the type of the unary node
+ * return           the type of the unary node
+ */
+string AST_unary_node::get_type() {
+    return this->type;
+}
+
+/**
+ * Allow the given visitor to visit this node
+ * v                the visitor that will visit this node
+ */
+string AST_unary_node::accept(printer_visitor * v) {
+    return v->visit(this);
+}
+
+/**
+ * Allow the given visitor to visit this node
+ * v                the visitor that will visit this node
+ */
+var_type AST_unary_node::accept(semantic_visitor * v) {
+    return v->visit(this);
+}
+
+/**
+ * Set the level of the node, recursively changing the level of its children
+ * level            the new level of the node
+ */
+void AST_unary_node::set_level(unsigned level) {
+    this->level = level;
+    if (this->expression != nullptr) {
+        this->expression->set_level(level + 1);
+    }
+}

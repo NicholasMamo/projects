@@ -1,0 +1,49 @@
+//
+// Created by memonick on 15/03/2016.
+//
+
+#include "../../headers/AST/AST_number_node.h"
+
+/**
+ * Create the node with the given level and value
+ * level            the level of the node
+ * value            the value of the node
+ */
+AST_number_node::AST_number_node(unsigned level, double value) {
+    this->set_level(level);
+    this->value = value;
+}
+
+/**
+ * Delete the node
+ */
+AST_number_node::~AST_number_node() {}
+
+void AST_number_node::set_value(double value) {
+    this->value = value;
+}
+
+/**
+ * Get the value of the node
+ * return           the value of the node
+ */
+double AST_number_node::get_value() {
+    return this->value;
+}
+
+/**
+ * Allow the given visitor to visit this node
+ * v                the visitor that will visit this node
+ */
+void AST_number_node::accept(printer_visitor * v) {
+    v->visit(this);
+}
+
+/**
+ * Get the textual representation of the node
+ */
+/*string AST_number_node::to_string() {
+    ostringstream tabs;
+    tabs << this->get_tabs() << this->get_value() << '\n';
+    return tabs.str();
+}*/

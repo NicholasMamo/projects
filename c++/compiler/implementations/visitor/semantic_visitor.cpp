@@ -1,0 +1,485 @@
+//
+// Created by memonick on 18/04/2016.
+//
+
+#include "../../headers/visitor/semantic_visitor.h"
+
+semantic_visitor::semantic_visitor() {
+    this->scope.push(new symbol_table());
+}
+
+bool semantic_visitor::analyze(AST_program_node * program) {
+    try {
+        program->accept(this);
+        return true;
+    } catch (general_exception * exception) {
+        cout << exception->to_string() << endl;
+        delete exception;
+        return false;
+    }
+}
+
+/**
+ * Visit the given actual parameters node, and any children it may have, and semantically-analyze it
+ * actual_parameters the node to visit
+ */
+void semantic_visitor::visit(AST_actual_parameters_node * actual_parameters_node) {
+    vector<AST_node *> actual_parameters = actual_parameters_node->get_actual_parameters();
+    for (unsigned i = 0; i < actual_parameters.size(); i++) { // go in reverse to facilitate the func call visit
+        actual_parameters.at(actual_parameters.size() - i - 1)->accept(this);
+    }
+}
+
+/**
+ * Visit the given assignment_node, and semantically-analyze it
+ * assignment_node  the node to visit
+ */
+void semantic_visitor::visit(AST_assignment_node * assignment_node) {
+    string name = assignment_node->get_identifier()->get_name();
+    if (this->scope.peek()->is_in_scope(name) && !this->scope.peek()->is_function(name)) {
+        var_type type = this->scope.peek()->get_type(name);
+        assignment_node->get_expression()->accept(this);
+        var_type actual_type = this->semantic_stack.pop();
+        if (is_number_type(actual_type)) {
+            this->resolve_number(type, actual_type);
+            actual_type = this->semantic_stack.pop();
+        }
+        if (actual_type != type) {
+            throw new incompatible_types_exception(actual_type, type);
+        }
+    } else {
+        throw new undeclared_var_exception(name);
+    }
+}
+
+/**
+ * Visit the given arithmetic_factor_node, and semantically-analyze it
+ * arithmetic_factor_node the node to visit
+ */
+void semantic_visitor::visit(AST_arithmetic_factor_node * arithmetic_factor_node) {
+    arithmetic_factor_node->get_left_child()->accept(this);
+    var_type type_1 = this->semantic_stack.pop();
+    arithmetic_factor_node->get_right_child()->accept(this);
+    var_type type_2 = this->semantic_stack.pop();
+    this->resolve_number(type_1, type_2);
+}
+
+/**
+ * Visit the given arithmetic_term_node, and semantically-analyze it
+ * arithmetic_term_node the node to visit
+ */
+void semantic_visitor::visit(AST_arithmetic_term_node * arithmetic_term_node) {
+    arithmetic_term_node->get_left_child()->accept(this);
+    var_type type_1 = this->semantic_stack.pop();
+    arithmetic_term_node->get_right_child()->accept(this);
+    var_type type_2 = this->semantic_stack.pop();
+    this->resolve_number(type_1, type_2);
+}
+
+/**
+ * Visit the given boolean expression node, and any children it may have, and semantically-analyze it
+ * node             the node to visit
+ */
+void semantic_visitor::visit(AST_block_node * block_node) {
+    vector<AST_statement_node *> statements = block_node->get_statements();
+    this->scope.push(symbol_table::clone(this->scope.peek())); // create a new scope
+    for (unsigned i = 0; i < statements.size(); i++) {
+        statements.at(i)->accept(this);
+    }
+    this->scope.pop(); // remove the new scope
+}
+
+/**
+ * Visit the given booelan node and semantically-analyze it
+ * boolean_node     the node to visit
+ */
+void semantic_visitor::visit(AST_boolean_node * boolean_node) {
+    this->semantic_stack.push(type_bool);
+}
+
+/**
+ * Visit the given boolean_factor_node, and semantically-analyze it
+ * boolean_factor_node the node to visit
+ */
+void semantic_visitor::visit(AST_boolean_factor_node * boolean_factor_node) {
+    boolean_factor_node->get_left_child()->accept(this);
+    var_type type_1 = this->semantic_stack.pop();
+    boolean_factor_node->get_right_child()->accept(this);
+    var_type type_2 = this->semantic_stack.pop();
+    this->resolve_boolean(type_1, type_2);
+}
+
+/**
+ * Visit the given boolean_term_node, and semantically-analyze it
+ * boolean_term_node the node to visit
+ */
+void semantic_visitor::visit(AST_boolean_term_node * boolean_term_node) {
+    boolean_term_node->get_left_child()->accept(this);
+    var_type type_1 = this->semantic_stack.pop();
+    boolean_term_node->get_right_child()->accept(this);
+    var_type type_2 = this->semantic_stack.pop();
+    this->resolve_boolean(type_1, type_2);
+}
+
+/**
+ * Visit the given expression node, and any children it may have, and semantically-analyze it
+ * expression_node  the node to visit
+ */
+void semantic_visitor::visit(AST_expression_node * expression_node) {
+    expression_node->get_left_child()->accept(this);
+    var_type type_1 = this->semantic_stack.pop();
+    expression_node->get_right_child()->accept(this);
+    var_type type_2 = this->semantic_stack.pop();
+    this->resolve_comparison(expression_node->get_value(), type_1, type_2);
+}
+
+/**
+ * Visit the given var_declaration_node, and semantically-analyze it
+ * var_declaration_node         the var_declaration_node to visit
+ */
+void semantic_visitor::visit(AST_formal_parameter_node * formal_parameter_node) {
+    formal_parameter_node->get_type()->accept(this);
+}
+
+/**
+ * Visit the given formal parameters node, and any children it may have, and semantically-analyze it
+ * formal_parameters the node to visit
+ */
+void semantic_visitor::visit(AST_formal_parameters_node * formal_parameters) {
+    vector<AST_formal_parameter_node *> parameters = formal_parameters->get_formal_parameters();
+    for (unsigned i = 0; i < parameters.size(); i++) {
+        string name = parameters.at(i)->get_identifier()->get_name();
+        this->scope.peek()->add_symbol(name);
+        parameters.at(i)->accept(this);
+        this->scope.peek()->set_type(name, this->semantic_stack.pop());
+    }
+}
+
+/**
+ * Visit the given function call node and semantically-analyze it
+ * func_call_node   the node to visit
+ */
+void semantic_visitor::visit(AST_func_call_node * func_call_node) {
+    symbol_table * scope = this->scope.peek();
+    string name = func_call_node->get_identifier()->get_name();
+    if (scope->is_in_scope(name) && scope->is_function(name)) {
+        AST_actual_parameters_node * actual_parameters = func_call_node->get_actual_parameters();
+        AST_formal_parameters_node * formal_parameters = scope->get_parameters(name);
+        if (actual_parameters->get_actual_parameters().size() == formal_parameters->get_formal_parameters().size()) {
+            actual_parameters->accept(this);
+            vector<AST_formal_parameter_node *> formal_parameters_vector = formal_parameters->get_formal_parameters();
+            for (unsigned i = 0; i < formal_parameters_vector.size(); i++) { // go in reverse to facilitate the func call visit
+                formal_parameters_vector.at(i)->accept(this);
+                var_type type = this->semantic_stack.pop(); // the type of the formal parameter
+                var_type actual_type = this->semantic_stack.pop(); // the type of the actual parameter
+                if (is_number_type(type) && is_number_type(actual_type)) {
+                    this->resolve_number(type, actual_type);
+                    actual_type = this->semantic_stack.pop();
+                }
+                if (type != actual_type) {
+                    throw new incompatible_types_exception(actual_type, type);
+                }
+            }
+            this->semantic_stack.push(scope->get_function_type(name));
+        } else {
+            throw new incorrect_parameter_count(actual_parameters->get_actual_parameters().size(), formal_parameters->get_formal_parameters().size());
+        }
+    } else {
+        throw new undeclared_func_exception(name);
+    }
+}
+
+/**
+ * Visit the given function declaration node and semantically-analyze it
+ * func_declaration_node        the node to visit
+ */
+void semantic_visitor::visit(AST_func_declaration_node * func_declaration_node) {
+    this->scope.peek()->add_symbol(func_declaration_node);
+    this->scope.push(symbol_table::clone(this->scope.peek())); // create a new scope
+    func_declaration_node->get_formal_parameters()->accept(this);
+    func_declaration_node->get_block()->accept(this);
+
+    func_declaration_node->get_type()->accept(this);
+    var_type type = this->semantic_stack.pop();
+    if (this->return_stack.size() == 0) {
+        throw new missing_return_exception(type);
+    } else {
+        var_type actual_type = this->return_stack.pop();
+        if (is_number_type(actual_type) && is_number_type(type)) {
+            this->resolve_number(actual_type, type);
+            actual_type = this->semantic_stack.pop();
+        }
+
+        if (actual_type == type_other) {
+            throw new missing_return_exception(type);
+        } else if (actual_type != type) {
+            throw new incorrect_return_type_exception(actual_type, type);
+        }
+    }
+    this->scope.pop(); // delete the scope
+}
+
+/**
+ * Visit the given identifier_node, and semantically-analyze it
+ * identifier_node             the node to visit
+ */
+void semantic_visitor::visit(AST_identifier_node * identifier_node) {
+    this->semantic_stack.push(this->scope.peek()->get_type(identifier_node->get_name()));
+}
+
+/**
+ * Visit the given if_node, and semantically-analyze it
+ * if_node             the node to visit
+ */
+void semantic_visitor::visit(AST_if_node * if_node) {
+    if_node->get_expression()->accept(this);
+    var_type expression = this->semantic_stack.pop();
+    int return_statements = this->return_stack.size();
+    if (expression == type_bool) {
+        if_node->get_block()->accept(this);
+        if (if_node->get_else_block() != nullptr) {
+            if_node->get_else_block()->accept(this);
+        }
+        // a return statement was found in either or both blocks - check that both blocks return something
+        if (this->return_stack.size() > return_statements) {
+            if (this->return_stack.size() == return_statements + 2) { // both blocks return a value
+                var_type type_1 = this->return_stack.pop();
+                var_type type_2 = this->return_stack.pop();
+                this->resolve(type_1, type_2);
+                this->return_stack.push(this->semantic_stack.pop());
+            } else {
+                this->return_stack.pop(); // there was only one return statement
+                this->return_stack.push(type_other); // push an invalid return
+            }
+        }
+    } else {
+        throw new incompatible_types_exception(expression, type_bool);
+    }
+}
+
+/**
+ * Visit the given integer number node and semantically-analyze it
+ * node             the node to visit
+ */
+void semantic_visitor::visit(AST_int_number_node * int_number_node) {
+    this->semantic_stack.push(type_int);
+}
+
+/**
+ * Visit the given boolean expression node, and any children it may have, and semantically-analyze it
+ * node             the node to visit
+ */
+void semantic_visitor::visit(AST_program_node * program_node) {
+    vector<AST_statement_node *> statements = program_node->get_statements();
+    for (unsigned i = 0; i < statements.size(); i++) {
+        statements.at(i)->accept(this);
+    }
+}
+
+/**
+ * Visit the given integer number node and semantically-analyze it
+ * node             the node to visit
+ */
+void semantic_visitor::visit(AST_real_number_node * real_number_node) {
+    this->semantic_stack.push(type_real);
+}
+
+/**
+ * Visit the given return node, and semantically-analyze it
+ * return_node             the node to visit
+ */
+void semantic_visitor::visit(AST_return_node * return_node) {
+    return_node->get_expression()->accept(this);
+    var_type type = this->semantic_stack.pop();
+    this->return_stack.push(type);
+    if(type == type_other) {
+        throw new incompatible_types_exception(type_other);
+    }
+}
+
+/**
+ * Visit the given statement node, and any children it may have, and semantically-analyze it
+ * node             the node to visit
+ */
+void semantic_visitor::visit(AST_statement_node * statement_node) {
+    statement_node->get_child()->accept(this);
+}
+
+/**
+ * Visit the given var_type node and semantically-analyze it
+ * string_node      the node to visit
+ */
+void semantic_visitor::visit(AST_string_node * string_node) {
+    this->semantic_stack.push(type_string);
+}
+
+/**
+ * Visit the given type_node, and semantically-analyze it
+ * type_node             the node to visit
+ */
+void semantic_visitor::visit(AST_type_node * type_node) {
+    this->semantic_stack.push(symbol::string_to_type(type_node->get_type()));
+}
+
+/**
+ * Visit the given unary node, and its expression, and semantically-analyze them
+ * node             the node to visit
+ */
+void semantic_visitor::visit(AST_unary_node * node) {
+    var_type operator_type = symbol::string_to_type(node->get_type());
+    node->get_expression()->accept(this);
+    var_type actual_type = this->semantic_stack.pop();
+    this->resolve_operator(operator_type, actual_type);
+}
+
+/**
+ * Visit the given var_declaration_node, and semantically-analyze it
+ * var_declaration_node             the var_declaration_node to visit
+ */
+void semantic_visitor::visit(AST_var_declaration_node * var_declaration_node) {
+    var_declaration_node->get_type()->accept(this);
+    var_type type = this->semantic_stack.pop();
+    var_declaration_node->get_expression()->accept(this);
+    var_type actual_type = this->semantic_stack.pop();
+    if (is_number_type(type) && is_number_type(actual_type)) {
+        this->resolve_number(type, actual_type);
+        actual_type = this->semantic_stack.pop();
+    }
+    if (type == actual_type) {
+        this->scope.peek()->add_symbol(var_declaration_node->get_identifier()->get_name());
+        this->scope.peek()->set_type(var_declaration_node->get_identifier()->get_name(), actual_type);
+    } else {
+        throw new incompatible_types_exception(actual_type, type);
+    }
+}
+
+/**
+ * Visit the given while_node, and semantically-analyze it
+ * while_node             the node to visit
+ */
+void semantic_visitor::visit(AST_while_node * while_node) {
+    while_node->get_expression()->accept(this);
+    var_type expression = this->semantic_stack.pop();
+    if (expression == type_bool) {
+        while_node->get_block()->accept(this);
+    } else {
+        throw new incompatible_types_exception(expression, type_bool);
+    }
+}
+
+/**
+ * Visit the given write_statement_node , and semantically-analyze it
+ * write_statement_node             the node to visit
+ */
+void semantic_visitor::visit(AST_write_statement_node * write_statement_node) {
+    write_statement_node->get_expression()->accept(this);
+    var_type type = this->semantic_stack.pop();
+    if(type == type_other) {
+        throw new incompatible_types_exception(type_other);
+    }
+}
+
+/**
+ * Check whether the given type is a number or not
+ * type             the variable type
+ * return           a boolean indicating whether the given type is a number (true), or not (false)
+ */
+bool semantic_visitor::is_number_type(var_type type) {
+    return (type == type_real || type == type_int);
+}
+
+/**
+ * Resolve the types given
+ * type_1           the first variable type
+ * type_2           the second variable type
+ */
+void semantic_visitor::resolve(var_type type_1, var_type type_2) {
+    if (type_1 == type_2) {
+        this->semantic_stack.push(type_1);
+    } else {
+        if (is_number_type(type_1) && is_number_type(type_2)) {
+            this->resolve_number(type_1, type_2);
+        } else {
+            this->semantic_stack.push(type_other);
+        }
+    }
+}
+
+/**
+ * Resolve the boolean types given
+ * type_1           the first variable type
+ * type_2           the second variable type
+ */
+void semantic_visitor::resolve_boolean(var_type type_1, var_type type_2) {
+    if (type_1 == type_2 && type_1 == type_bool) {
+        this->semantic_stack.push(type_bool);
+    } else {
+        if (type_1 != type_bool) {
+            throw new incompatible_types_exception(type_1, type_bool);
+        } else if (type_2 != type_bool) {
+            throw new incompatible_types_exception(type_2, type_bool);
+        }
+    }
+}
+
+/**
+ * Resolve the comparison given
+ * operation        the operation on the types
+ * type_1           the first variable type
+ * type_2           the second variable type
+ */
+void semantic_visitor::resolve_comparison(string operation, var_type type_1, var_type type_2) {
+    if (operation == "==" || operation == "!=") {
+        if (type_1 == type_2) {
+            this->semantic_stack.push(type_bool);
+        } else {
+            throw new incompatible_types_exception(type_1, type_2);
+        }
+    } else if (operation == "<" || operation == "<=" || operation == ">" || operation == ">=") {
+        if (is_number_type(type_1) && is_number_type(type_2)) {
+            this->semantic_stack.push(type_bool);
+        } else {
+            if (!is_number_type(type_1)) {
+                throw new incompatible_types_exception(type_1, type_real);
+            } else if (!is_number_type(type_2)) {
+                throw new incompatible_types_exception(type_2, type_real);
+            }
+        }
+    } else {
+        throw new incompatible_types_exception(type_bool);
+    }
+}
+
+/**
+ * Resolve the number types given
+ * type_1           the first variable type
+ * type_2           the second variable type
+ */
+void semantic_visitor::resolve_number(var_type type_1, var_type type_2) {
+    if (type_1 == type_2) {
+        this->semantic_stack.push(type_1);
+    } else if ((type_1 == type_int && type_2 == type_real) || (type_1 == type_real && type_2 == type_int)) {
+        this->semantic_stack.push(type_real);
+    } else {
+        if (!is_number_type(type_1)) {
+            throw new incompatible_types_exception(type_1);
+        } else if (!is_number_type(type_2)) {
+            throw new incompatible_types_exception(type_2);
+        }
+    }
+}
+
+/**
+ * Resolve the types given
+ * operator_type    the first variable type
+ * expression_type  the second variable type
+ */
+void semantic_visitor::resolve_operator(var_type operator_type, var_type expression_type) {
+    if (operator_type == type_int && (expression_type == type_int || expression_type == type_real)) {
+        this->semantic_stack.push(expression_type);
+    } else if (operator_type == type_bool && expression_type == type_bool) {
+        this->semantic_stack.push(expression_type);
+    } else {
+        throw new incompatible_types_exception(operator_type, expression_type);
+    }
+}

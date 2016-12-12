@@ -1,0 +1,81 @@
+//
+// Created by memonick on 11/04/2016.
+//
+
+#include "../../headers/AST/AST_while_node.h"
+
+/**
+ * Initialize the node with the given level
+ * level            the level of the node
+ */
+AST_while_node::AST_while_node(unsigned level) : AST_statement_node(level) {
+    this->set_level(level);
+}
+
+/**
+ * Delete the node
+ */
+AST_while_node::~AST_while_node() {
+    if (this->expression != nullptr) {
+        delete this->expression;
+        this->expression = nullptr;
+    }
+    if (this->block != nullptr) {
+        delete this->block;
+        this->block = nullptr;
+    }
+}
+
+/**
+ * Set the expression of the while node
+ * expression_node  the expression node of the while node
+ */
+void AST_while_node::set_expression(AST_node * expression_node) {
+    this->expression = expression_node;
+}
+
+/**
+ * Set the block of the while node
+ * block            the block of the while node
+ */
+void AST_while_node::set_block(AST_block_node * block) {
+    this->block = block;
+}
+
+/**
+ * Get the expression of the while node
+ * return           the expression of the while node
+ */
+AST_node * AST_while_node::get_expression() {
+    return this->expression;
+}
+
+/**
+ * Get the block of the while node
+ * return           the block of the while node
+ */
+AST_block_node * AST_while_node::get_block() {
+    return this->block;
+}
+
+/**
+ * Allow the given visitor to visit this node
+ * v                the visitor that will visit this node
+ */
+void AST_while_node::accept(visitor * v) {
+    v->visit(this);
+}
+
+/**
+ * Set the level of the node, recursively changing the level of its children
+ * level            the new level of the node
+ */
+void AST_while_node::set_level(unsigned level) {
+    this->level = level;
+    if (this->expression != nullptr) {
+        this->expression->set_level(level + 1);
+    }
+    if (this->block != nullptr) {
+        this->block->set_level(level + 1);
+    }
+}
