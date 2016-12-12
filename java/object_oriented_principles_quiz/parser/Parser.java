@@ -1,0 +1,147 @@
+package parser;
+
+import java.io.*;
+import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import quiz.exceptions.*;
+import quiz.questions.*;
+
+/**
+ *
+ * @author memonick
+ * @date Nov 30, 2015
+ */
+public abstract class Parser {
+    
+    /**
+     * Parse the file indicated by the given filename into a quiz
+     * @param filename The name of the file to be parsed
+     * @return An ArrayList of Question instances that were retrieved from the file with the given filename
+     * @throws UnknownCommandException An UnknownCommandException is thrown whenever an unknown command is encountered
+     * @throws UnknownQuestionTypeException An UnknownCommandException is thrown whenever an unknown Question type is encountered
+     */
+    public static ArrayList<Question> parseFile(String filename) throws UnknownCommandException, UnknownQuestionTypeException {
+        ArrayList<Question> questions = new ArrayList<>(); // initialize the ArrayList of Question instances
+        
+        String filePath = Parser.getFilePath(); // get the file path
+        try (BufferedReader reader = new BufferedReader(new FileReader(filePath + "input/" + filename))) { // try to open the file for reading
+            String line;
+            Question question = null;
+            while((line = reader.readLine()) != null) { // while there is still something to read
+                if (line.contains("QT")) { // if the command at the current line indicates a new Question
+                    String type = line.substring(line.indexOf("QT") + 3); // extract the Question type
+                    // depending on the Question type extracted, initialize the current working Question
+                    switch (type) {
+                        case "TruthQuestion":
+                            question = new TruthQuestion();
+                            break;
+                        case "SingleAnswerQuestion":
+                            question = new SingleAnswerQuestion();
+                            break;
+                        case "MultiAnswerQuestion":
+                            question = new MultiAnswerQuestion();
+                            break;
+                        default:
+                            throw new UnknownQuestionTypeException(type); // if the Question type was not recognized, indicate this
+                    }
+                } else if (question != null) { // if the Question has been initialized
+                    switch (line.substring(0, 1)) { // extract the command
+                        case "Q": // if the command is a Question definition
+                            question.setQuestion(Parser.getQuestion(line)); // set its definition
+                            break;
+                        case "A": // if the command is an Answer
+                            // typecast the Question and add the answer as applicable
+                            if (question instanceof SingleAnswerQuestion || question instanceof MultiAnswerQuestion) { // there is no need to add the choice if it's a TruthQuestion since, in that case, the choices are fixed
+                                question.addChoice(Parser.getChoice(line));
+                            }
+                            break;
+                        case "C": // if the command indicates the correct answer
+                            // typecast the Question and indicate the correct answer as applicable, flagging any errors and resuming
+                            try {
+                                ArrayList<Integer> correctAnswers = Parser.getCorrectAnswers(line); // get all the correct answers from the line
+                                question.addAnswers(correctAnswers); // add the correct answers
+                            } catch (AnswerOutOfBoundsException | TooManyAnswersException exception) {}
+                            questions.add(question); // add the question
+                            break;
+                        default:
+                            throw new UnknownCommandException(line.substring(0, 1)); // if the commandtype was not recognized, indicate this
+                    }
+                }
+            }
+            reader.close(); // close the file being read
+        } catch(FileNotFoundException ex) {
+            System.out.println("Unable to open file '" + filename + "'");
+        } catch(IOException ex) {
+            System.out.println("Error reading file '" + filename + "'");
+        }
+        
+        return questions;
+    }
+    
+    /**
+     * Parse the given line and and extract every index to the correct answer
+     * @param line The line to parse
+     * @return The list of correct answers as parsed from the line
+     */
+    private static ArrayList<Integer> getCorrectAnswers(String line) {
+        ArrayList<Integer> correctAnswers = new ArrayList<>();
+        int start = 3; // skip the command
+        int space = line.indexOf(" ", start) + 1;
+        String answer = line;
+        // go through each correct answer, separated from the previous ones (if any) with a whitespace
+        while (line.indexOf(" ", start) > 0) {
+            // add the correct answer to the list of correct answers, flagging any errors
+            try {
+                correctAnswers.add(Integer.parseInt(answer.substring(start + 1, line.indexOf(" ", start))));
+            } catch (NumberFormatException numberFormat) {}
+            start = space;
+            space = line.indexOf(" ", start) + 1;
+        }
+        // finally, add the last correct answer to the list
+        try {
+            correctAnswers.add(Integer.parseInt(answer.substring(start + 1)));
+        } catch (NumberFormatException numberFormat) {}
+        return correctAnswers;
+    }
+    
+    /**
+     * Extract the choice from the given line
+     * @param line The string that will be parsed for the answer
+     * @return The choice in textual form
+     */
+    private static String getChoice(String line) {
+        return line.substring(line.indexOf(" "));
+    }
+    
+    /**
+     * Extract the question text from the given line
+     * @param line The string that will be parsed for the answer
+     * @return The question in textual form
+     */
+    private static String getQuestion(String line) {
+        return line.substring(2);
+    }
+    
+    /**
+     * Get the path of the current working directory
+     * @return 
+     */
+    private static String getFilePath() {
+        try {
+            File temp = new File(Parser.class.getProtectionDomain().getCodeSource().getLocation().toURI().getPath()); // get the class file's path
+            String absolutePath = temp.getAbsolutePath(); // get the absolute path from the path obtained previously
+            if(absolutePath.contains("q2.jar")) { // if this is called from an executing jar file
+                absolutePath = absolutePath.replace("q2.jar", ""); // remove the file name
+                return absolutePath + File.separator + ".." + File.separator; // go two levels up
+            } else { // if this is not called from an executing jar file (i.e., while testing)
+                return absolutePath + File.separator + ".." + File.separator; // go three levels up
+            }
+        } catch (URISyntaxException uri) {
+            uri.printStackTrace();
+        }
+        return "";
+    }
+
+}

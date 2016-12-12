@@ -1,0 +1,85 @@
+package quiz.questions;
+
+import java.util.ArrayList;
+import quiz.exceptions.AnswerOutOfBoundsException;
+import quiz.exceptions.InvalidInputException;
+import quiz.exceptions.TooManyAnswersException;
+
+/**
+ *
+ * @author memonick
+ * @date Nov 30, 2015
+ */
+public class TruthQuestion extends Question {
+        
+    /**
+     * Initialize the TruthQuestion with an empty name
+     */
+    public TruthQuestion() {
+        this("");
+    }
+    
+    /**
+     * Initialize the TruthQuestion with the given text
+     * @param question The String representation of the Question
+     */
+    public TruthQuestion(String question) {
+        this.setQuestion(question);
+        this.points = 1;
+        this.choices = new ArrayList<>();
+        this.answers = new ArrayList<>();
+        this.choices.add("True");
+        this.choices.add("False");
+    }
+    
+    /**
+     * Initialize the TruthQuestion with the given text and answer
+     * @param question The String representation of the Question
+     * @param answer The correct answer to the TruthQuestion
+     */
+    public TruthQuestion(String question, int answer) {
+        this.setQuestion(question);
+        this.choices = new ArrayList<>();
+        this.answers = new ArrayList<>();
+        this.answers.clear();
+        this.answers.add(answer);
+    }
+    
+    /**
+     * Set the answer to the TruthQuestion
+     * @param index The correct answer to the TruthQuestion
+     * @throws AnswerOutOfBoundsException An AnswerOutOfBoundsException is thrown if the answer cannot be accepted because its index is not in the answer set 
+     * @throws TooManyAnswersException A TooManyAnswersException is thrown if the TruthQuestion already has an answer
+     */
+    @Override
+    public void addAnswer(int index) throws AnswerOutOfBoundsException, TooManyAnswersException {
+        if (index >= 0 && index < this.getNumberofChoices()) { // if the index provided is within the bounds of the ArrayList of answers
+            if (this.answers.size() > 0) { // if there is already an answer
+                throw new TooManyAnswersException(); // throw an exception that indicates this
+            } else { // if there is no answer
+                this.answers.add(index); // add the answer
+            }
+        } else { // if the index is not within the bounds
+            throw new AnswerOutOfBoundsException(index); // throw an exception that indicates this
+        }
+    }
+
+    /**
+     * Checks whether the given answer is correct or not
+     * @param answer The answer to be tested
+     * @return A boolean indicating whether the given answer is correct or not
+     * @throws InvalidInputException An InvalidInputException is thrown whenever the given input is incorrect
+     */
+    @Override
+    public boolean isCorrect(String answer) throws InvalidInputException {
+        switch (answer.toLowerCase()) {
+            case "t": // if the answer is "t"
+                return this.answers.get(0) == 0; // and the index of the correct answer is 0 (referring to true), return true
+            case "f": // if the answer is "f"
+                return this.answers.get(0) == 1; // and the index of the correct answer is 1 (referring to false), return true
+            default: // if the answer is anything else
+                throw new InvalidInputException(answer); // the input must be invalid, so throw an exception that indicates this
+        }
+    }
+
+}

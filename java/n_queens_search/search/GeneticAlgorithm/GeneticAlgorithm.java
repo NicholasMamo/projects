@@ -1,0 +1,264 @@
+package search.GeneticAlgorithm;
+
+import chessboard.Chessboard;
+import chessboard.Queen;
+import java.util.ArrayList;
+import java.util.Random;
+
+/**
+ *
+ * @author memonick
+ * @date Mar 5, 2016
+ */
+public abstract class GeneticAlgorithm {
+    
+    /**
+     * The mutation rate of the Genetic Algorithm
+     */
+    public static double mutationRate = 0.005;
+    
+    /**
+     * The number of Chromosomes on which to operate when looking for a solution
+     */
+    public static int chromosomeCount = 100;
+    
+    /**
+     * The maximum number of times to repeat the GeneticAlgorithm's main loop
+     */
+    public static int rounds = 1000;
+    
+    /**
+     * The fitness threshold for the acceptable average fitness before stopping
+     */
+    public static double averageThreshold = 0.975;
+    
+    /**
+     * Search for an optimal solution on the given Chessboard
+     * @param chessboard the Chessboard on which searching will take place
+     * @return a solution, or however close the GeneticAlgorithm gets to one
+     */    
+    public static Chessboard search(Chessboard chessboard) {
+        int round = 0;
+        Chromosome[] chromosomes = GeneticAlgorithm.initializePopulation(chessboard.getLength());
+        calculateFitness(chromosomes);
+        do {
+            chromosomes = GeneticAlgorithm.sort(chromosomes); // sort the Chromosome instances
+            chromosomes = GeneticAlgorithm.crossover(chromosomes); // perform crossover on the Chromosome instances
+            chromosomes = GeneticAlgorithm.mutation(chromosomes); // perform mutation on the Chromosome instances
+            calculateFitness(chromosomes);
+            round++;
+        } while (round < rounds && GeneticAlgorithm.fitnessAverage(chromosomes) < GeneticAlgorithm.averageThreshold); // stop either when the number of rounds is met, or when the average threshold is exceeded
+        
+        calculateFitness(chromosomes);
+        chromosomes = GeneticAlgorithm.sort(chromosomes); // sort the Chromosome instances
+        return chromosomes[0].getChessboard();
+    }
+    
+    /**
+     * Initialize the population of Chromosome instances
+     * @param length the length that Chessboard instances should have
+     * @return the generated population of Chromosome instances
+     */
+    private static Chromosome[] initializePopulation(int length) {
+        if (chromosomeCount % 2 != 0) {
+            chromosomeCount++;
+        }
+        Chromosome[] chromosomes = new Chromosome[chromosomeCount];
+        for (int i = 0; i < chromosomeCount; i++) {
+            Chessboard chessboard = new Chessboard(length);
+            chessboard.randomizeByColumn();
+            //chessboard.randomize();
+            chromosomes[i] = new Chromosome(chessboard);
+        }
+        return chromosomes;
+    }
+    
+    /**
+     * Calculate the fitness of the given Chromosome instances
+     * @param chromosomes the Chromosome instances whose fitness will be calculated
+     */
+    private static void calculateFitness(Chromosome[] chromosomes) {
+        if (chromosomes.length > 0) {
+            int maxCollisions = chromosomes[0].getChessboard().getLength() * chromosomes[0].getChessboard().getLength();
+            for (Chromosome chromosome : chromosomes) {
+                chromosome.getChessboard().calculateCollisions();
+                double collisions = chromosome.getChessboard().getCollisions();
+                chromosome.setFitness(1.0 - collisions/maxCollisions);
+            }
+        }
+    }
+    
+    /**
+     * Perform partially-matched crossover with the Roulette Wheel method
+     * @param chromosomes the Chromosome instances on which to perform partially-matched crossover on
+     * @return the offspring of the given Chromosome instances
+     */
+    private static Chromosome[] crossover(Chromosome[] chromosomes) {
+        Chromosome[] offspring = new Chromosome[chromosomes.length];
+        
+        if (chromosomes.length > 0) {
+            int length = chromosomes[0].getChessboard().getLength(); // get the length of each Chessboard
+            Random r = new Random();
+            
+            for (int i = 1; i < chromosomes.length; i += 2) {
+                int index1 = selectChromosome(chromosomes);
+                int index2 = selectChromosome(chromosomes);
+                ArrayList<Queen> p1 = (ArrayList<Queen>) chromosomes[index1].getChessboard().getQueens().clone(); // the first parent's Queen instances
+                ArrayList<Queen> p2 = (ArrayList<Queen>) chromosomes[index2].getChessboard().getQueens().clone(); // the second parent's Queen instances
+                
+                int b1 = r.nextInt(length);
+                int b2 = r.nextInt(length);
+                int lowerBound = Math.min(b1, b2); // the lower bound index for swapping
+                int upperBound = Math.max(b1, b2); // the upper bound index for swapping
+                
+                for (int j = lowerBound; j < upperBound; j++) {
+                    Queen v1 = p1.get(j); // the Queen that should be removed from the first parent's Queen instances
+                    Queen v2 = p2.get(j); // the Queen that should be removed from the second parent's Queen instances
+                    
+                    for (int x = 0; x < lowerBound; x++) {
+                        if (p1.get(x).equals(v2)) {
+                            p1.remove(x);
+                            p1.add(x, v1);
+                        }
+                        if (p2.get(x).equals(v1)) {
+                            p2.remove(x);
+                            p2.add(x, v2);
+                        }
+                    }
+                    
+                    for (int x = upperBound; x < length; x++) {
+                        if (p1.get(x).equals(v2)) {
+                            p1.remove(x);
+                            p1.add(x, v1);
+                        }
+                        if (p2.get(x).equals(v1)) {
+                            p2.remove(x);
+                            p2.add(x, v2);
+                        }
+                    }
+                    
+                    // perform the cross over in the matching section
+                    p1.remove(j);
+                    p1.add(j, v2);
+                    p2.remove(j);
+                    p2.add(j, v1);
+                }
+                
+                Chessboard c1 = new Chessboard(length);
+                Chessboard c2 = new Chessboard(length);
+                c1.addQueens(p1);
+                c2.addQueens(p2);
+                offspring[i - 1] = new Chromosome(c1);
+                offspring[i] = new Chromosome(c2);
+                
+            }
+        }
+        
+        return offspring;
+    }
+    
+    /**
+     * Pick a Chromosome from the given array in Roulette Wheel fashion
+     * @param chromosomes the array of Chromosome instances from which to pick one
+     * @return the index of a Chromosome picked from the given array in Roulette Wheel fashion
+     */
+    private static int selectChromosome(Chromosome[] chromosomes) {
+        Chromosome[] exponentialChromosomes = new Chromosome[chromosomes.length];
+        for (int i = 0; i < chromosomes.length; i++) {
+            exponentialChromosomes[i] = new Chromosome(chromosomes[i].getChessboard());
+            exponentialChromosomes[i].setFitness(chromosomes[i].getFitness() * (Math.pow(Math.E, (-(1.0/7.0)) * i)));
+        }
+        
+        Random random = new Random();
+        double r = random.nextDouble() * GeneticAlgorithm.fitnessSum(exponentialChromosomes);
+        double tempSum = 0;
+        
+        for (int i = 0; i < exponentialChromosomes.length; i++) {
+            if (tempSum < r && tempSum + exponentialChromosomes[i].getFitness() >= r) {
+                return i;
+            } else {
+                tempSum += exponentialChromosomes[i].getFitness();
+            }
+        }
+        return chromosomes.length - 1;
+    }
+    
+    /**
+     * Get the sum of fitness of the Chromosome instances
+     * @param chromosomes the Chromosome instances whose fitness will be calculated
+     * @return the sum of fitness of the Chromosome instances
+     */
+    private static double fitnessSum(Chromosome[] chromosomes) {
+        double sum = 0;
+        for (Chromosome chromosome : chromosomes) {
+            sum += chromosome.getFitness();
+        }
+        return sum;
+    }
+    
+    /**
+     * Get the average fitness of the Chromosome instances
+     * @param chromosomes the Chromosome instances whose fitness will be calculated
+     * @return the sum of fitness of the Chromosome instances
+     */
+    private static double fitnessAverage(Chromosome[] chromosomes) {
+        return (GeneticAlgorithm.fitnessSum(chromosomes)/chromosomes.length);
+    }
+    
+    /**
+     * Sort the given array of Chromosome instances
+     * @param chromosomes the array of Chromosome instances to sort
+     * @return the sorted array of Chromosome instances
+     */
+    private static Chromosome[] sort(Chromosome[] chromosomes) {
+        for (int i = 0; i < chromosomes.length; i++) {
+            for (int j = i; j < chromosomes.length; j++) {
+                if (chromosomes[i].getFitness() < chromosomes[j].getFitness()) {
+                    Chromosome chromosome = chromosomes[i];
+                    chromosomes[i] = chromosomes[j];
+                    chromosomes[j] = chromosome;
+                }
+            }
+        }
+        return chromosomes;
+    }
+    
+    /**
+     * Perform mutation on the array of Chromosome instances 
+     * @param chromosomes the array of Chromosome instances
+     * @return the array of Chromosome instances with mutation performed on it
+     */
+    private static Chromosome[] mutation(Chromosome[] chromosomes) {
+        Random random = new Random();
+        if (chromosomes.length > 0) {
+            int length = chromosomes[0].getChessboard().getLength();
+            for (Chromosome chromosome : chromosomes) {
+                ArrayList<Queen> tempQueens = (ArrayList<Queen>) chromosome.getChessboard().getQueens().clone();
+                for (Queen queen : tempQueens) {
+                    double r = random.nextDouble();
+                    if (r < mutationRate && length > 2) {
+                        int x = queen.getX(), y;
+                        do {
+                            //x = random.nextInt(length);
+                            y = random.nextInt(length);
+                        } while (!chromosome.getChessboard().isEmpty(x, y));
+                        chromosome.getChessboard().moveQueen(queen, new Queen(x, y));
+                    }
+                }
+            }
+        }
+        return chromosomes;
+    }
+    
+    /**
+     * Print the setup of the GA
+     */
+    public static void printSetup() {
+        System.out.println("GA Method:");
+        System.out.println("\tmutation rate: " + mutationRate);
+        System.out.println("\tchromosome count: " + chromosomeCount);
+        System.out.println("\tattempts: " + rounds);
+        System.out.println("\taverage threshold: " + averageThreshold);
+    }
+
+}
