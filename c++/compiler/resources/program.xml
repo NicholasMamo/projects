@@ -1,0 +1,132 @@
+<program>
+	<statement>
+		<func_declaration>
+			<identifier name = "fibonacci"></identifier>
+			<formal_parameters>
+				<formal_parameter>
+					<identifier name = "x"></identifier>
+					<type>int</type>
+				</formal_parameter>
+			</formal_parameters>
+			<type>int</type>
+			<block>
+				<if>
+					<boolean_term operator = "or">
+						<binary_expression_node operation = "==">
+							<identifier name = "x"></identifier>
+							<integer>0</integer>
+						</binary_expression_node>
+						<binary_expression_node operation = "==">
+							<identifier name = "x"></identifier>
+							<integer>1</integer>
+						</binary_expression_node>
+					</boolean_term>
+					<block>
+						<return>
+							<integer>1</integer>
+						</return>
+					</block>
+					<block>
+						<return>
+							<arithmetic_term operator = "+">
+								<func_call>
+									<identifier name = "fibonacci"></identifier>
+									<actual_parameters>
+										<arithmetic_term operator = "-">
+											<identifier name = "x"></identifier>
+											<integer>1</integer>
+										</arithmetic_term>
+									</actual_parameters>
+								</func_call>
+								<func_call>
+									<identifier name = "fibonacci"></identifier>
+									<actual_parameters>
+										<arithmetic_term operator = "-">
+											<identifier name = "x"></identifier>
+											<integer>2</integer>
+										</arithmetic_term>
+									</actual_parameters>
+								</func_call>
+							</arithmetic_term>
+						</return>
+					</block>
+				</if>
+			</block>
+		</func_declaration>
+	</statement>
+	<statement>
+		<func_declaration>
+			<identifier name = "fact"></identifier>
+			<formal_parameters>
+				<formal_parameter>
+					<identifier name = "x"></identifier>
+					<type>int</type>
+				</formal_parameter>
+			</formal_parameters>
+			<type>int</type>
+			<block>
+				<if>
+					<binary_expression_node operation = "<=">
+						<identifier name = "x"></identifier>
+						<integer>1</integer>
+					</binary_expression_node>
+					<block>
+						<return>
+							<integer>1</integer>
+						</return>
+					</block>
+					<block>
+						<return>
+							<arithmetic_factor operator = "*">
+								<identifier name = "x"></identifier>
+								<func_call>
+									<identifier name = "fact"></identifier>
+									<actual_parameters>
+										<arithmetic_term operator = "-">
+											<identifier name = "x"></identifier>
+											<integer>1</integer>
+										</arithmetic_term>
+									</actual_parameters>
+								</func_call>
+							</arithmetic_factor>
+						</return>
+					</block>
+				</if>
+			</block>
+		</func_declaration>
+	</statement>
+	<statement>
+		<func_declaration>
+			<identifier name = "max"></identifier>
+			<formal_parameters>
+				<formal_parameter>
+					<identifier name = "x"></identifier>
+					<type>real</type>
+				</formal_parameter>
+				<formal_parameter>
+					<identifier name = "y"></identifier>
+					<type>real</type>
+				</formal_parameter>
+			</formal_parameters>
+			<type>real</type>
+			<block>
+				<if>
+					<binary_expression_node operation = "<">
+						<identifier name = "y"></identifier>
+						<identifier name = "x"></identifier>
+					</binary_expression_node>
+					<block>
+						<return>
+							<identifier name = "x"></identifier>
+						</return>
+					</block>
+					<block>
+						<return>
+							<identifier name = "y"></identifier>
+						</return>
+					</block>
+				</if>
+			</block>
+		</func_declaration>
+	</statement>
+</program>

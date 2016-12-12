@@ -1,0 +1,57 @@
+<program>
+	<statement>
+		<var_declaration>
+			<identifier name = "y"></identifier>
+			<type>real</type>
+			<arithmetic_term operator = "+">
+				<integer>1</integer>
+				<integer>2</integer>
+			</arithmetic_term>
+		</var_declaration>
+	</statement>
+	<statement>
+		<assignment>
+			<identifier name = "y"></identifier>
+			<arithmetic_term operator = "+">
+				<integer>3</integer>
+				<arithmetic_factor operator = "*">
+					<integer>2</integer>
+					<integer>5</integer>
+				</arithmetic_factor>
+			</arithmetic_term>
+		</assignment>
+	</statement>
+	<statement>
+		<assignment>
+			<identifier name = "y"></identifier>
+			<arithmetic_term operator = "+">
+				<integer>3</integer>
+				<arithmetic_term operator = "-">
+					<arithmetic_factor operator = "*">
+						<integer>3</integer>
+						<integer>5</integer>
+					</arithmetic_factor>
+					<integer>1</integer>
+				</arithmetic_term>
+			</arithmetic_term>
+		</assignment>
+	</statement>
+	<statement>
+		<assignment>
+			<identifier name = "y"></identifier>
+			<arithmetic_term operator = "+">
+				<integer>3</integer>
+				<arithmetic_term operator = "-">
+					<arithmetic_factor operator = "*">
+						<integer>2</integer>
+						<arithmetic_term operator = "-">
+							<integer>5</integer>
+							<integer>1</integer>
+						</arithmetic_term>
+					</arithmetic_factor>
+					<integer>4</integer>
+				</arithmetic_term>
+			</arithmetic_term>
+		</assignment>
+	</statement>
+</program>

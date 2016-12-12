@@ -1,0 +1,13 @@
+A lexer reads characters and outputs tokens (the function getNext())
+
+Lexer:
+	1.	Reading/loading program input
+		resources folder contains source files (programs)
+		using ifstream
+	2.	Create tokens - TOK_number and TOK_arithmetic
+	3.	Define token struct/class
+	4.	Implement get next token
+		a.	handle whitespace
+		b.	token number
+		c.	token arithmetic
+	5.	Implement a lexer consumer (loop through the file and call lexer)

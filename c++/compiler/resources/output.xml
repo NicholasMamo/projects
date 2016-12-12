@@ -1,0 +1,13 @@
+<program>
+	<statement>
+		<assignment>
+			<identifier name = "y"></identifier>
+			<func_call>
+				<identifier name = "fact"></identifier>
+				<actual_parameters>
+					<integer>4</integer>
+				</actual_parameters>
+			</func_call>
+		</assignment>
+	</statement>
+</program>

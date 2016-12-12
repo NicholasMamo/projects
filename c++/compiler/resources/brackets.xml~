@@ -1,0 +1,20 @@
+<program>
+	<statement>
+		<if>
+			<binary_expression_node operation = "<=">
+				<integer>2</integer>
+				<integer>3</integer>
+			</binary_expression_node>
+			<block>
+				<var_declaration>
+					<identifier name = "y"></identifier>
+					<type>real</type>
+					<arithmetic_term operator = "-">
+						<integer>3</integer>
+						<integer>1</integer>
+					</arithmetic_term>
+				</var_declaration>
+			</block>
+		</if>
+	</statement>
+</program>

@@ -1,0 +1,14 @@
+<program>
+	<statement>
+		<var_declaration>
+			<identifier name = "y"></identifier>
+			<type>real</type>
+			<func_call>
+				<identifier name = "fibonacci"></identifier>
+				<actual_parameters>
+					<integer>6</integer>
+				</actual_parameters>
+			</func_call>
+		</var_declaration>
+	</statement>
+</program>

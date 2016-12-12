@@ -1,0 +1,59 @@
+<program>
+	<statement>
+		<var_declaration>
+			<identifier name = "i"></identifier>
+			<type>int</type>
+			<integer>0</integer>
+		</var_declaration>
+	</statement>
+	<statement>
+		<while>
+			<binary_expression_node operation = "<">
+				<identifier name = "i"></identifier>
+				<integer>10</integer>
+			</binary_expression_node>
+			<block>
+				<assignment>
+					<identifier name = "i"></identifier>
+					<arithmetic_term operator = "+">
+						<identifier name = "i"></identifier>
+						<integer>1</integer>
+					</arithmetic_term>
+				</assignment>
+			</block>
+		</while>
+	</statement>
+	<statement>
+		<var_declaration>
+			<identifier name = "y"></identifier>
+			<type>real</type>
+			<integer>0</integer>
+		</var_declaration>
+	</statement>
+	<statement>
+		<if>
+			<binary_expression_node operation = "<=">
+				<integer>2</integer>
+				<integer>3</integer>
+			</binary_expression_node>
+			<block>
+				<assignment>
+					<identifier name = "y"></identifier>
+					<arithmetic_term operator = "-">
+						<integer>3</integer>
+						<integer>1</integer>
+					</arithmetic_term>
+				</assignment>
+			</block>
+			<block>
+				<assignment>
+					<identifier name = "y"></identifier>
+					<arithmetic_term operator = "+">
+						<integer>3</integer>
+						<integer>1</integer>
+					</arithmetic_term>
+				</assignment>
+			</block>
+		</if>
+	</statement>
+</program>
